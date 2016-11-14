@@ -14,8 +14,9 @@ const int DEFAULT_PORT = 8081;
 class _Target {
   final RegExp regex;
   final String to;
+  final String prefix;
 
-  _Target(this.regex, this.to);
+  _Target(this.regex, this.to, this.prefix);
 }
 
 class Server {
@@ -28,13 +29,13 @@ class Server {
 
   ignore(String target) => _ignores.add(new RegExp(target));
 
-  rewrite(String target, {String to}) =>
-      _proxies.add(new _Target(new RegExp(target), to));
+  rewrite(String target, {String to, String prefix}) =>
+      _proxies.add(new _Target(new RegExp(target), to, prefix));
 
   ignoreAll(List<String> targets) => targets.forEach(ignore);
 
-  rewriteAll(List<String> targets, {String to}) =>
-      targets.forEach((target) => proxy(target, to: to));
+  rewriteAll(List<String> targets, {String to, String prefix}) =>
+      targets.forEach((target) => rewrite(target, to: to, prefix: prefix));
 
   start(String target) {
     shelf.serve(_handler(target), host, port).then((server) {
@@ -53,8 +54,15 @@ class Server {
       _Target target = _hasProxyMatch(path);
 
       if (target != null) {
+        String path;
+        if(target.prefix != null){
+          path = target.prefix + request.requestedUri.path;
+        }
+        else{
+          path = target.to;
+        }
         request =
-            _applyUri(request, _applyPath(request.requestedUri, target.to));
+            _applyUri(request, _applyPath(request.requestedUri, path));
       }
 
       return handler(request);
